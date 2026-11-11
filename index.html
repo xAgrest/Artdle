@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artdle</title>
+<style>
+:root{--ph:84px;
+  --bg:#000; --paper:#0c0c0c; --ink:#f2efe8; --muted:#8c877d; --line:#26241f;
+  --ok:#4f8a45; --near:#d4a02a; --no:#b5473a; --blank:#161512; --accent:#f2efe8;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:14px}
+h1{margin:0;font-size:clamp(34px,8vw,52px);font-weight:700;letter-spacing:6px;text-transform:uppercase;line-height:1}
+h1 em{font-style:italic;font-weight:400}
+.sub{color:var(--muted);font-size:14px;margin-top:6px;font-family:system-ui,sans-serif}
+.stats{font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.stats b{color:var(--ink);font-size:18px;display:block}
+.modes{display:flex;gap:8px;margin:16px 0 8px;font-family:system-ui,sans-serif}
+.modes button{flex:0 0 auto}
+button{font:inherit;font-family:system-ui,sans-serif;font-size:14px;cursor:pointer;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:8px 14px;border-radius:999px;transition:.15s}
+button:hover{background:var(--ink);color:var(--bg)}
+button.on{background:var(--ink);color:var(--bg)}
+button:disabled{opacity:.4;cursor:default;background:transparent;color:var(--ink)}
+.search{position:relative;margin:14px 0 6px}
+.search input{width:100%;font:inherit;font-size:18px;padding:14px 16px;border:1px solid #4a463d;background:var(--paper);color:var(--ink);border-radius:10px;outline:none}
+.search input:focus{box-shadow:0 0 0 4px color-mix(in srgb,var(--near) 35%,transparent)}
+.list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--paper);border:1px solid #4a463d;border-radius:10px;max-height:300px;overflow:auto;z-index:10;display:none;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.list.open{display:block}
+.list div{padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.list div:last-child{border:0}
+.list .av{width:46px;height:46px;min-height:0;flex:0 0 46px;border-radius:50%;font-size:14px}
+.list .nmx{flex:1;min-width:0}
+.list div small{margin-left:auto;color:var(--muted);font-family:system-ui,sans-serif;font-size:12px;align-self:center}
+.list div.sel,.list div:hover{background:var(--blank)}
+.meta{display:flex;justify-content:space-between;font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);margin:6px 2px 14px;gap:10px;flex-wrap:wrap}
+.cols,.row .cells{display:grid;grid-template-columns:1.35fr .9fr .9fr 1.1fr 1.45fr;gap:5px}
+.cols{margin-left:calc(var(--ph) + 8px);font-family:system-ui,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);text-align:center;margin-bottom:6px}
+.row{margin-bottom:12px}
+.row .nm{font-weight:700;font-size:17px;margin:0 2px 5px}
+.row{display:grid;grid-template-columns:var(--ph) 1fr;gap:8px;align-items:stretch}
+.rc{min-width:0}
+.av{border-radius:8px;background:var(--blank);overflow:hidden;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;min-height:calc(var(--ph) + 12px);color:var(--muted);font-weight:700;font-size:22px;letter-spacing:1px}
+.av img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.cell{min-height:58px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6px 4px;color:#fff;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;line-height:1.2;word-break:break-word;backface-visibility:hidden;animation:flip .55s both}
+.cell.ok{background:var(--ok)} .cell.near{background:var(--near);color:#1f1b16} .cell.no{background:var(--no)}
+.cell .big{font-size:16px}
+.cell .ar{font-size:18px;line-height:1}
+@keyframes flip{0%{transform:rotateX(90deg);opacity:0}100%{transform:rotateX(0);opacity:1}}
+.hint{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px dashed #4a463d;border-radius:10px;font-family:system-ui,sans-serif}
+.mask{display:flex;flex-wrap:wrap;gap:2px 8px;font-family:"Iowan Old Style",Georgia,serif;font-size:22px;letter-spacing:3px;font-weight:700}
+.mask .w{display:inline-flex;gap:3px}
+.mask .l{display:inline-block;min-width:.7em;text-align:center;border-bottom:2px solid var(--muted);line-height:1.15}
+.mask .l.r{border-color:var(--near);color:var(--near)}
+.legend{font-family:system-ui,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 2px 18px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.end{background:var(--paper);border:1px solid #4a463d;border-radius:12px;padding:20px;margin:18px 0;text-align:center;animation:flip .5s both}
+.end{display:flex;gap:18px;align-items:center;text-align:left}
+.end .pic{flex:0 0 150px;height:200px;border-radius:8px;background:var(--blank);overflow:hidden;display:none;border:1px solid var(--line)}
+.end .pic.show{display:block}
+.end .pic img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.end .txt{flex:1;min-width:0}
+.end h2{margin:0 0 4px;font-size:26px}
+@media(max-width:480px){:root{--ph:64px}.cols,.row .cells{gap:3px;grid-template-columns:1.25fr .85fr .85fr 1.1fr 1.45fr}.cell{padding:4px 1px;hyphens:auto}.cell .big{font-size:11px}.cell.gen .big{font-size:9.5px}.cols{font-size:9px;letter-spacing:.3px}.gbtn{font-family:system-ui,sans-serif;font-size:14px;padding:8px 14px;border-radius:999px;background:var(--ink);color:var(--bg);text-decoration:none;border:1px solid var(--ink)}
+.end .btns{justify-content:center}.end{flex-direction:column;text-align:center}.end .pic{flex-basis:auto;width:150px;height:190px}}
+.end p{margin:4px 0 14px;color:var(--muted);font-family:system-ui,sans-serif}
+.end .btns{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap}
+.empty{color:var(--muted);text-align:center;padding:26px 10px;font-style:italic}
+.modal{position:fixed;inset:0;z-index:100;background:#000;display:none;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.modal.open{display:flex}
+.mcard{width:100%;max-width:420px;text-align:center;animation:pop .45s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.mcard .kick{font-family:system-ui,sans-serif;letter-spacing:4px;text-transform:uppercase;font-size:12px;color:var(--near);margin-bottom:12px}
+.mcard .av{width:210px;height:270px;margin:0 auto 18px;font-size:54px;border-radius:12px}
+.mcard h2{margin:0 0 6px;font-size:clamp(26px,7vw,34px);line-height:1.15}
+.mcard p{margin:0 0 22px;color:var(--muted);font-family:system-ui,sans-serif;font-size:14px}
+.mcard .btns{display:flex;flex-direction:column;gap:10px}
+.mcard a.big,.mcard button{display:block;font-family:system-ui,sans-serif;font-size:15px;padding:13px 18px;border-radius:999px;text-decoration:none;text-align:center}
+.mcard a.big{background:var(--ink);color:var(--bg);border:1px solid var(--ink);font-weight:600}
+.mcard a.big:hover{opacity:.85}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-family:system-ui,sans-serif;font-size:14px;opacity:0;pointer-events:none;transition:.25s}
+.toast.show{opacity:1}
+@media(max-width:480px){.cell{min-height:54px}.row .nm{font-size:15px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Artdle</h1>
+      <div class="sub" id="sub">Codzienna zgadywanka o artystach</div>
+    </div>
+    <div class="stats"><b id="streak">0</b>seria dni</div>
+  </header>
+
+  <div class="modes">
+    <button id="mDaily" class="on">Dzisiejsza</button>
+    <button id="mPractice">Losowy artysta</button>
+  </div>
+
+  <div class="search">
+    <input id="inp" type="text" placeholder="Wpisz artystę…" autocomplete="off" spellcheck="false">
+    <div class="list" id="list"></div>
+  </div>
+  <div class="meta"><span id="count">Próby: 0</span><button id="giveUp" style="padding:3px 12px;font-size:12px">Poddaję się</button></div>
+
+  <div id="hintBox"></div>
+
+  <div class="legend">
+    <span><i style="background:var(--ok)"></i>trafione</span>
+    <span><i style="background:var(--near)"></i>blisko (±25 lat / ten sam region / ta sama epoka)</span>
+    <span><i style="background:var(--no)"></i>pudło</span>
+    <span>↑ szukany jest późniejszy · ↓ wcześniejszy</span>
+  </div>
+
+  <div class="cols"><div>Płeć</div><div>Urodz.</div><div>Zmarł</div><div>Kraj</div><div>Nurt</div></div>
+  <div id="rows"><div class="empty">Zacznij od dowolnego artysty — każda próba zawęża pole.</div></div>
+  <div id="end"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- DANE ---------- */
+// nurt -> epoka (do żółtych pól)
+const MOV = {
+  "Proto-renesans":"Dawni mistrzowie","Renesans":"Dawni mistrzowie","Manieryzm":"Dawni mistrzowie","Barok":"Dawni mistrzowie","Rokoko":"Dawni mistrzowie",
+  "Klasycyzm":"XIX wiek","Romantyzm":"XIX wiek","Realizm":"XIX wiek","Historyzm":"XIX wiek","Ukiyo-e":"XIX wiek",
+  "Impresjonizm":"Przełom wieków","Postimpresjonizm":"Przełom wieków","Symbolizm":"Przełom wieków","Secesja / Młoda Polska":"Przełom wieków",
+  "Ekspresjonizm":"Awangarda","Fowizm":"Awangarda","Kubizm":"Awangarda","Surrealizm":"Awangarda","Dadaizm":"Awangarda","Abstrakcja":"Awangarda","Konstruktywizm":"Awangarda","Formizm":"Awangarda","Art déco":"Awangarda","Realizm amerykański":"Awangarda","Modernizm":"Awangarda",
+  "Ekspresjonizm abstrakcyjny":"Po 1945","Pop-art":"Po 1945","Op-art":"Po 1945","Neoekspresjonizm":"Po 1945","Sztuka współczesna":"Po 1945"
+};
+const REG = {
+  "Polska":"Europa Środkowa","Szwajcaria":"Europa Środkowa","Niemcy":"Europa Środkowa","Austria":"Europa Środkowa",
+  "Francja":"Europa Zachodnia","Belgia":"Europa Zachodnia","Holandia":"Europa Zachodnia","Wielka Brytania":"Europa Zachodnia",
+  "Włochy":"Europa Południowa","Hiszpania":"Europa Południowa",
+  "Norwegia":"Skandynawia","Szwecja":"Skandynawia","Rosja":"Europa Wschodnia",
+  "USA":"Ameryka","Meksyk":"Ameryka","Japonia":"Azja"
+};
+// [imię, aliasy do wyszukiwania, płeć, ur., zm. (0 = żyje), kraj, nurt]
+const A = [
+ // Polska
+ ["Jan Matejko","","M",1838,1893,"Polska","Historyzm"],
+ ["Stanisław Wyspiański","wyspianski","M",1869,1907,"Polska","Secesja / Młoda Polska"],
+ ["Jacek Malczewski","","M",1854,1929,"Polska","Symbolizm"],
+ ["Józef Chełmoński","chelmonski","M",1849,1914,"Polska","Realizm"],
+ ["Olga Boznańska","boznanska","K",1865,1940,"Polska","Secesja / Młoda Polska"],
+ ["Józef Mehoffer","","M",1869,1946,"Polska","Secesja / Młoda Polska"],
+ ["Leon Wyczółkowski","wyczolkowski","M",1852,1936,"Polska","Impresjonizm"],
+ ["Wojciech Weiss","","M",1875,1950,"Polska","Secesja / Młoda Polska"],
+ ["Władysław Podkowiński","podkowinski szal uniesien","M",1866,1895,"Polska","Symbolizm"],
+ ["Aleksander Gierymski","","M",1850,1901,"Polska","Realizm"],
+ ["Maksymilian Gierymski","","M",1846,1874,"Polska","Realizm"],
+ ["Henryk Siemiradzki","","M",1843,1902,"Polska","Historyzm"],
+ ["Juliusz Kossak","","M",1824,1899,"Polska","Historyzm"],
+ ["Wojciech Kossak","","M",1856,1942,"Polska","Historyzm"],
+ ["Piotr Michałowski","michalowski","M",1800,1855,"Polska","Romantyzm"],
+ ["Stanisław Ignacy Witkiewicz (Witkacy)","witkacy witkiewicz","M",1885,1939,"Polska","Formizm"],
+ ["Tadeusz Makowski","","M",1882,1932,"Polska","Kubizm"],
+ ["Zofia Stryjeńska","stryjenska","K",1891,1976,"Polska","Art déco"],
+ ["Tamara Łempicka","lempicka lempicki","K",1898,1980,"Polska","Art déco"],
+ ["Władysław Strzemiński","strzeminski","M",1893,1952,"Polska","Konstruktywizm"],
+ ["Tadeusz Kantor","","M",1915,1990,"Polska","Sztuka współczesna"],
+ ["Wojciech Fangor","","M",1922,2015,"Polska","Op-art"],
+ ["Zdzisław Beksiński","beksinski","M",1929,2005,"Polska","Surrealizm"],
+ ["Magdalena Abakanowicz","","K",1930,2017,"Polska","Sztuka współczesna"],
+ ["Wilhelm Sasnal","","M",1972,0,"Polska","Sztuka współczesna"],
+ // Włochy
+ ["Giotto di Bondone","giotto","M",1267,1337,"Włochy","Proto-renesans"],
+ ["Sandro Botticelli","botticelli","M",1445,1510,"Włochy","Renesans"],
+ ["Leonardo da Vinci","leonardo","M",1452,1519,"Włochy","Renesans"],
+ ["Michał Anioł","michelangelo michal aniol buonarroti","M",1475,1564,"Włochy","Renesans"],
+ ["Rafael Santi","raphael rafael","M",1483,1520,"Włochy","Renesans"],
+ ["Tycjan","titian tiziano","M",1488,1576,"Włochy","Renesans"],
+ ["Caravaggio","","M",1571,1610,"Włochy","Barok"],
+ ["Artemisia Gentileschi","","K",1593,1656,"Włochy","Barok"],
+ ["Bernardo Bellotto (Canaletto)","canaletto bellotto","M",1722,1780,"Włochy","Rokoko"],
+ ["Amedeo Modigliani","modigliani","M",1884,1920,"Włochy","Ekspresjonizm"],
+ // Niderlandy
+ ["Jan van Eyck","eyck","M",1390,1441,"Belgia","Renesans"],
+ ["Hieronim Bosch","hieronymus bosch","M",1450,1516,"Holandia","Renesans"],
+ ["Pieter Bruegel Starszy","brueghel breughel","M",1525,1569,"Belgia","Renesans"],
+ ["Peter Paul Rubens","rubens","M",1577,1640,"Belgia","Barok"],
+ ["Rembrandt van Rijn","rembrandt","M",1606,1669,"Holandia","Barok"],
+ ["Jan Vermeer","johannes vermeer","M",1632,1675,"Holandia","Barok"],
+ ["Vincent van Gogh","gogh","M",1853,1890,"Holandia","Postimpresjonizm"],
+ ["Piet Mondrian","mondriaan","M",1872,1944,"Holandia","Abstrakcja"],
+ ["René Magritte","rene magritte","M",1898,1967,"Belgia","Surrealizm"],
+ // Hiszpania
+ ["El Greco","greco","M",1541,1614,"Hiszpania","Manieryzm"],
+ ["Diego Velázquez","velazquez","M",1599,1660,"Hiszpania","Barok"],
+ ["Francisco Goya","goya","M",1746,1828,"Hiszpania","Romantyzm"],
+ ["Pablo Picasso","picasso","M",1881,1973,"Hiszpania","Kubizm"],
+ ["Joan Miró","miro","M",1893,1983,"Hiszpania","Surrealizm"],
+ ["Salvador Dalí","dali","M",1904,1989,"Hiszpania","Surrealizm"],
+ // Francja
+ ["Nicolas Poussin","poussin","M",1594,1665,"Francja","Barok"],
+ ["Antoine Watteau","watteau","M",1684,1721,"Francja","Rokoko"],
+ ["Jean-Honoré Fragonard","fragonard","M",1732,1806,"Francja","Rokoko"],
+ ["Élisabeth Vigée Le Brun","vigee le brun","K",1755,1842,"Francja","Klasycyzm"],
+ ["Jacques-Louis David","david","M",1748,1825,"Francja","Klasycyzm"],
+ ["Jean-Auguste-Dominique Ingres","ingres","M",1780,1867,"Francja","Klasycyzm"],
+ ["Eugène Delacroix","delacroix","M",1798,1863,"Francja","Romantyzm"],
+ ["Jean-François Millet","millet","M",1814,1875,"Francja","Realizm"],
+ ["Gustave Courbet","courbet","M",1819,1877,"Francja","Realizm"],
+ ["Camille Pissarro","pissarro","M",1830,1903,"Francja","Impresjonizm"],
+ ["Édouard Manet","manet","M",1832,1883,"Francja","Impresjonizm"],
+ ["Edgar Degas","degas","M",1834,1917,"Francja","Impresjonizm"],
+ ["Paul Cézanne","cezanne","M",1839,1906,"Francja","Postimpresjonizm"],
+ ["Claude Monet","monet","M",1840,1926,"Francja","Impresjonizm"],
+ ["Berthe Morisot","morisot","K",1841,1895,"Francja","Impresjonizm"],
+ ["Pierre-Auguste Renoir","renoir","M",1841,1919,"Francja","Impresjonizm"],
+ ["Paul Gauguin","gauguin","M",1848,1903,"Francja","Postimpresjonizm"],
+ ["Georges Seurat","seurat","M",1859,1891,"Francja","Postimpresjonizm"],
+ ["Henri de Toulouse-Lautrec","toulouse lautrec","M",1864,1901,"Francja","Postimpresjonizm"],
+ ["Henri Matisse","matisse","M",1869,1954,"Francja","Fowizm"],
+ ["Marcel Duchamp","duchamp","M",1887,1968,"Francja","Dadaizm"],
+ // Niemcy / Austria / Północ
+ ["Albrecht Dürer","durer","M",1471,1528,"Niemcy","Renesans"],
+ ["Hans Holbein Młodszy","holbein","M",1497,1543,"Niemcy","Renesans"],
+ ["Caspar David Friedrich","friedrich","M",1774,1840,"Niemcy","Romantyzm"],
+ ["Franz Marc","","M",1880,1916,"Niemcy","Ekspresjonizm"],
+ ["Ernst Ludwig Kirchner","kirchner","M",1880,1938,"Niemcy","Ekspresjonizm"],
+ ["Max Ernst","","M",1891,1976,"Niemcy","Surrealizm"],
+ ["Gerhard Richter","richter","M",1932,0,"Niemcy","Sztuka współczesna"],
+ ["Gustav Klimt","klimt","M",1862,1918,"Austria","Secesja / Młoda Polska"],
+ ["Egon Schiele","schiele","M",1890,1918,"Austria","Ekspresjonizm"],
+ ["Edvard Munch","munch","M",1863,1944,"Norwegia","Ekspresjonizm"],
+ ["Hilma af Klint","klint","K",1862,1944,"Szwecja","Abstrakcja"],
+ // Wlk. Brytania
+ ["J.M.W. Turner","william turner","M",1775,1851,"Wielka Brytania","Romantyzm"],
+ ["John Constable","constable","M",1776,1837,"Wielka Brytania","Romantyzm"],
+ ["Francis Bacon","bacon","M",1909,1992,"Wielka Brytania","Sztuka współczesna"],
+ ["David Hockney","hockney","M",1937,0,"Wielka Brytania","Pop-art"],
+ // Rosja / Japonia
+ ["Katsushika Hokusai","hokusai","M",1760,1849,"Japonia","Ukiyo-e"],
+ ["Iwan Ajwazowski","aivazovsky aiwazowski","M",1817,1900,"Rosja","Romantyzm"],
+ ["Ilja Riepin","repin","M",1844,1930,"Rosja","Realizm"],
+ ["Wassily Kandinsky","kandinsky wasyl kandinski","M",1866,1944,"Rosja","Abstrakcja"],
+ ["Kazimierz Malewicz","malevich malewicz","M",1879,1935,"Rosja","Abstrakcja"],
+ ["Yayoi Kusama","kusama","K",1929,0,"Japonia","Pop-art"],
+ // USA / Meksyk
+ ["Mary Cassatt","cassatt","K",1844,1926,"USA","Impresjonizm"],
+ ["Edward Hopper","hopper","M",1882,1967,"USA","Realizm amerykański"],
+ ["Georgia O'Keeffe","okeeffe o'keeffe","K",1887,1986,"USA","Modernizm"],
+ ["Frida Kahlo","kahlo","K",1907,1954,"Meksyk","Surrealizm"],
+ ["Mark Rothko","rothko","M",1903,1970,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Jackson Pollock","pollock","M",1912,1956,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Roy Lichtenstein","lichtenstein","M",1923,1997,"USA","Pop-art"],
+ ["Andy Warhol","warhol","M",1928,1987,"USA","Pop-art"],
+ ["Jean-Michel Basquiat","basquiat","M",1960,1988,"USA","Neoekspresjonizm"],
+
+ // Artystki
+ ["Anna Bilińska","bilinska bohdanowiczowa","K",1854,1893,"Polska","Realizm"],
+ ["Mela Muter","","K",1876,1967,"Polska","Ekspresjonizm"],
+ ["Katarzyna Kobro","","K",1898,1951,"Polska","Konstruktywizm"],
+ ["Maria Jarema","","K",1908,1958,"Polska","Abstrakcja"],
+ ["Alina Szapocznikow","","K",1926,1973,"Polska","Sztuka współczesna"],
+ ["Teresa Pągowska","pagowska","K",1926,2007,"Polska","Sztuka współczesna"],
+ ["Aleksandra Waliszewska","","K",1976,0,"Polska","Sztuka współczesna"],
+ ["Sofonisba Anguissola","","K",1532,1625,"Włochy","Renesans"],
+ ["Judith Leyster","","K",1609,1660,"Holandia","Barok"],
+ ["Rachel Ruysch","","K",1664,1750,"Holandia","Barok"],
+ ["Angelica Kauffman","kauffmann","K",1741,1807,"Szwajcaria","Klasycyzm"],
+ ["Rosa Bonheur","","K",1822,1899,"Francja","Realizm"],
+ ["Suzanne Valadon","","K",1865,1938,"Francja","Postimpresjonizm"],
+ ["Käthe Kollwitz","kathe kollwitz","K",1867,1945,"Niemcy","Ekspresjonizm"],
+ ["Paula Modersohn-Becker","becker","K",1876,1907,"Niemcy","Ekspresjonizm"],
+ ["Gabriele Münter","munter","K",1877,1962,"Niemcy","Ekspresjonizm"],
+ ["Natalia Gonczarowa","goncharova","K",1881,1962,"Rosja","Abstrakcja"],
+ ["Marie Laurencin","","K",1883,1956,"Francja","Kubizm"],
+ ["Sonia Delaunay","","K",1885,1979,"Francja","Abstrakcja"],
+ ["Alma Thomas","","K",1891,1978,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Lee Krasner","","K",1908,1984,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Louise Bourgeois","","K",1911,2010,"USA","Sztuka współczesna"],
+ ["Leonora Carrington","","K",1917,2011,"Meksyk","Surrealizm"],
+ ["Joan Mitchell","","K",1925,1992,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Helen Frankenthaler","","K",1928,2011,"USA","Ekspresjonizm abstrakcyjny"],
+ ["Marlene Dumas","","K",1953,0,"Holandia","Sztuka współczesna"],
+ ["Tracey Emin","","K",1963,0,"Wielka Brytania","Sztuka współczesna"],
+ ["Jenny Saville","","K",1970,0,"Wielka Brytania","Sztuka współczesna"],
+].map((a,i)=>({id:i,name:a[0],alias:a[1],g:a[2],b:a[3],d:a[4],c:a[5],m:a[6]}));
+
+/* ---------- POMOCNICZE ---------- */
+const $=s=>document.getElementById(s);
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ł/g,"l").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+A.forEach(a=>a.key=norm(a.name+" "+a.alias));
+const NOW=2026;
+const dEff=a=>a.d||3000;  // żyjący = "bardzo późno"
+function mulberry(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const PERM=(()=>{const r=mulberry(20260101),p=A.map((_,i)=>i);for(let i=p.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}return p})();
+function dayNo(){const n=new Date();return Math.floor(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())/864e5)}
+function dateStr(){return new Date().toLocaleDateString("pl-PL",{day:"numeric",month:"long"})}
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- STAN ---------- */
+let mode="daily", target, guesses=[], done=false, won=false, hints=0;
+const day=dayNo();
+let stats=store.get("kdm-stats",{streak:0,lastWin:-1,wins:0,played:0});
+
+function setTarget(){
+  if(mode==="daily"){target=A[PERM[day%A.length]];}
+  else{target=A[Math.floor(Math.random()*A.length)];}
+}
+function load(){
+  guesses=[];done=false;won=false;hints=0;
+  setTarget();
+  if(mode==="daily"){
+    const s=store.get("kdm-day",null);
+    if(s&&s.day===day){guesses=s.g;done=s.done;won=s.won;hints=s.hints||0}
+  }
+  render(true);
+}
+function save(){ if(mode==="daily") store.set("kdm-day",{day,g:guesses,done,won,hints}) }
+
+/* ---------- PORÓWNANIE ---------- */
+function cmp(g){
+  const t=target;
+  const yr=(gv,tv)=>gv===tv?{c:"ok"}:{c:Math.abs(gv-tv)<=25?"near":"no",ar:tv>gv?"↑":"↓"};
+  const r={};
+  r.g={c:g.g===t.g?"ok":"no",txt:g.g==="K"?"Kobieta":"Mężczyzna"};
+  r.b={...yr(g.b,t.b),txt:g.b};
+  if(g.d===0&&t.d===0) r.d={c:"ok",txt:"żyje"};
+  else if(g.d===0) r.d={c:"no",ar:"↓",txt:"żyje"};
+  else if(t.d===0) r.d={c:"no",ar:"↑",txt:g.d};
+  else r.d={...yr(g.d,t.d),txt:g.d};
+  r.c={c:g.c===t.c?"ok":(REG[g.c]===REG[t.c]?"near":"no"),txt:g.c};
+  r.m={c:g.m===t.m?"ok":(MOV[g.m]===MOV[t.m]?"near":"no"),txt:g.m};
+  return r;
+}
+const cell=(o,delay,x="")=>`<div class="cell ${o.c} ${x}" style="animation-delay:${delay}ms"><span class="big">${o.txt}</span>${o.ar?`<span class="ar">${o.ar}</span>`:""}</div>`;
+
+/* ---------- RENDER ---------- */
+function render(initial){
+  $("sub").textContent = mode==="daily" ? "Zagadka na "+dateStr() : "Tryb treningowy — losowy artysta";
+  $("mDaily").classList.toggle("on",mode==="daily");
+  $("mPractice").classList.toggle("on",mode==="practice");
+  $("count").textContent="Próby: "+guesses.length;
+  $("giveUp").disabled=done||guesses.length===0;
+  renderHint();
+  $("inp").disabled=done;
+  const live=stats.lastWin===day||stats.lastWin===day-1?stats.streak:0;
+  $("streak").textContent=live;
+  const rows=$("rows");
+  if(!guesses.length){rows.innerHTML='<div class="empty">Zacznij od dowolnego artysty — każda próba zawęża pole.</div>';}
+  else{
+    rows.innerHTML=[...guesses].reverse().map((id,ri)=>{
+      const g=A[id],r=cmp(g),fresh=(ri===0&&!initial);
+      const d=fresh?0:-1000; // starsze bez animacji (ujemne opóźnienie = od razu koniec)
+      const dl=i=>fresh?i*160:-1000;
+      return `<div class="row"><div class="av" data-av="${g.id}">${ini(g.name)}</div><div class="rc"><div class="nm">${g.name}</div><div class="cells">${cell(r.g,dl(0),"gen")}${cell(r.b,dl(1))}${cell(r.d,dl(2))}${cell(r.c,dl(3))}${cell(r.m,dl(4))}</div></div></div>`;
+    }).join("");
+  }
+  document.querySelectorAll("[data-av]").forEach(el=>fillAv(el));
+  const end=$("end");
+  if(done){
+    const t=target;
+    end.innerHTML=`<div class="end"><div class="pic" id="pic"></div><div class="txt"><h2>${won?"Brawo! 🎨":"To był:"} ${t.name}</h2>
+      <p>${won?`Zgadnięte w ${guesses.length} ${guesses.length===1?"próbie":"próbach"}.`:"Następnym razem się uda."} ${t.b}–${t.d||"…"} · ${t.c} · ${t.m}</p>
+      <div class="btns"><a class="gbtn" href="${gUrl(t)}" target="_blank" rel="noopener">Zobacz prace →</a><button id="share">Kopiuj wynik</button><button id="again">Losowy artysta</button></div></div></div>`;
+    loadPic(t);
+    $("share").onclick=share;$("again").onclick=()=>{mode="practice";load()};
+  } else end.innerHTML="";
+}
+
+/* ---------- ZDJĘCIE (Wikipedia, wymaga internetu; brak = po prostu bez zdjęcia) ---------- */
+async function wikiImg(host,params){
+  const u=`https://${host}.wikipedia.org/w/api.php?action=query&prop=pageimages&pithumbsize=500&redirects=1&format=json&origin=*&`+params;
+  const j=await (await fetch(u)).json();
+  const pages=Object.values((j.query&&j.query.pages)||{}).filter(p=>p.thumbnail).sort((a,b)=>(a.index||0)-(b.index||0));
+  return pages[0]&&pages[0].thumbnail.source;
+}
+async function restImg(host,title){
+  const j=await (await fetch(`https://${host}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,"_"))}?redirect=true`)).json();
+  return j.thumbnail&&j.thumbnail.source;
+}
+async function findPic(t){
+  const cached=store.get("kdm-pic-"+t.id,null); if(cached) return cached;
+  const clean=t.name.replace(/\s*\(.*?\)/,"");
+  const tries=[
+    ()=>restImg("pl",clean),
+    ()=>restImg("en",clean),
+    ()=>wikiImg("pl","titles="+encodeURIComponent(clean)),
+    ()=>wikiImg("en","titles="+encodeURIComponent(clean)),
+    ()=>wikiImg("pl","generator=search&gsrlimit=1&gsrsearch="+encodeURIComponent(clean)),
+    ()=>wikiImg("en","generator=search&gsrlimit=1&gsrsearch="+encodeURIComponent(clean)),
+    ()=>wikiImg("en","generator=search&gsrlimit=1&gsrsearch="+encodeURIComponent((t.alias.split(" ")[0]?clean+" "+t.alias:clean)+" painter"))
+  ];
+  for(const f of tries){ try{const src=await f(); if(src){store.set("kdm-pic-"+t.id,src);return src}}catch(e){} }
+  return null;
+}
+const ini=n=>n.replace(/\(.*?\)/g,"").split(/[\s-]+/).filter(w=>/^[A-ZŁŚŻŹĆÓÉ]/.test(w)).slice(0,2).map(w=>w[0]).join("");
+const picJobs={};
+function fillAv(el){
+  if(el.querySelector('img')) return;
+  const t=A[+el.dataset.av];
+  (picJobs[t.id]=picJobs[t.id]||findPic(t)).then(src=>{
+    if(!src){delete picJobs[t.id];return}
+    if(el.querySelector('img')) return;
+    const img=new Image();img.alt=t.name;img.style.cssText='width:100%;height:100%;object-fit:cover;object-position:top';img.onload=()=>{el.textContent='';el.appendChild(img)};img.src=src;
+  });
+}
+async function loadPic(t){
+  const src=await findPic(t); const box=$("pic");
+  if(!src||!box||target!==t) return;
+  const img=new Image(); img.alt=t.name;
+  img.onload=()=>{box.appendChild(img);box.classList.add("show")};
+  img.src=src;
+}
+
+const HINT_AFTER=5;
+function renderHint(){
+  const box=$("hintBox");
+  if(done||guesses.length<HINT_AFTER){box.innerHTML="";return}
+  const total=[...target.name.replace(/\(.*?\)/g,"")].filter(c=>/\p{L}/u.test(c)).length;
+  let left=hints,html="";
+  if(hints>0){
+    html='<div class="mask">'+target.name.replace(/\(.*?\)/g,"").trim().split(/\s+/).map(w=>'<span class="w">'+[...w].map(c=>{
+      if(!/\p{L}/u.test(c)) return `<span>${c}</span>`;
+      if(left>0){left--;return `<span class="l r">${c}</span>`}
+      return '<span class="l">&nbsp;</span>';
+    }).join("")+'</span>').join("")+'</div>';
+  }
+  const more=hints<total;
+  box.innerHTML=`<div class="hint">${html}<button id="hintBtn" ${more?"":"disabled"}>${hints?"Kolejna litera":"Podpowiedź?"}</button></div>`;
+  $("hintBtn").onclick=()=>{hints++;save();renderHint()};
+}
+
+const gUrl=t=>"https://www.google.com/search?tbm=isch&q="+encodeURIComponent(t.name.replace(/\(.*?\)/g,"").trim()+" malarstwo obrazy");
+function showModal(){
+  const t=target,m=$("modal");
+  m.innerHTML=`<div class="mcard">
+    <div class="kick">${won?"Zgadnięte w "+guesses.length+" "+(guesses.length===1?"próbie":"próbach"):"Szukany artysta"}</div>
+    <div class="av" data-av="${t.id}">${ini(t.name)}</div>
+    <h2>${won?"Brawo! 🎨 ":""}${t.name}</h2>
+    <p>${t.b}–${t.d||"…"} · ${t.c} · ${t.m}</p>
+    <div class="btns">
+      <a class="big" href="${gUrl(t)}" target="_blank" rel="noopener">Zobacz, co malował(a) →</a>
+      <button id="mShare">Kopiuj wynik</button>
+      <button id="mClose">Zamknij</button>
+    </div></div>`;
+  m.classList.add("open");
+  m.querySelectorAll("[data-av]").forEach(fillAv);
+  $("mShare").onclick=share;
+  $("mClose").onclick=closeModal;
+}
+function closeModal(){$("modal").classList.remove("open")}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+function guess(id){
+  if(done||guesses.includes(id))return;
+  guesses.push(id);
+  if(id===target.id){done=true;won=true;finish()}
+  save();render();
+  if(done)showModal();
+  $("inp").value="";closeList();
+  if(!done)$("inp").focus();
+}
+function finish(){
+  if(mode!=="daily")return;
+  stats.played++;
+  if(won){stats.wins++;stats.streak=(stats.lastWin===day-1)?stats.streak+1:1;stats.lastWin=day}
+  else{stats.streak=0}
+  store.set("kdm-stats",stats);
+}
+function share(){
+  const sym={ok:"🟩",near:"🟨",no:"🟥"};
+  const lines=guesses.map(id=>{const r=cmp(A[id]);return["g","b","d","c","m"].map(k=>sym[r[k].c]).join("")});
+  const txt=`Artdle ${mode==="daily"?dateStr():"(trening)"} — ${won?guesses.length+" prób":"X"}\n`+lines.join("\n");
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("Skopiowano!")).catch(()=>toast("Nie udało się skopiować"));
+}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600)}
+
+/* ---------- AUTOUZUPEŁNIANIE ---------- */
+let sel=0,cur=[];
+function openList(q){
+  const n=norm(q);
+  if(!n){closeList();return}
+  cur=A.filter(a=>!guesses.includes(a.id)&&n.split(" ").every(w=>a.key.includes(w)))
+       .sort((a,b)=>(norm(b.name).startsWith(n)-norm(a.name).startsWith(n))||a.name.localeCompare(b.name,"pl")).slice(0,8);
+  sel=0;
+  const l=$("list");
+  l.innerHTML=cur.length?cur.map((a,i)=>`<div data-i="${i}" class="${i===0?"sel":""}"><span class="av" data-av="${a.id}">${ini(a.name)}</span><span class="nmx">${a.name}</span><small>${a.c}</small></div>`).join(""):'<div style="cursor:default;color:var(--muted)">Brak takiego artysty w bazie</div>';
+  l.classList.add("open");
+  l.querySelectorAll("[data-av]").forEach(fillAv);
+}
+function closeList(){$("list").classList.remove("open")}
+function hi(){[...$("list").children].forEach((e,i)=>e.classList.toggle("sel",i===sel));const e=$("list").children[sel];e&&e.scrollIntoView({block:"nearest"})}
+$("inp").addEventListener("input",e=>openList(e.target.value));
+$("inp").addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"){sel=Math.min(sel+1,cur.length-1);hi();e.preventDefault()}
+  else if(e.key==="ArrowUp"){sel=Math.max(sel-1,0);hi();e.preventDefault()}
+  else if(e.key==="Enter"&&cur[sel]){guess(cur[sel].id)}
+  else if(e.key==="Escape")closeList();
+});
+$("list").addEventListener("mousedown",e=>{const d=e.target.closest("[data-i]");if(d){e.preventDefault();guess(cur[+d.dataset.i].id)}});
+document.addEventListener("click",e=>{if(!e.target.closest(".search"))closeList()});
+$("mDaily").onclick=()=>{mode="daily";load()};
+$("mPractice").onclick=()=>{mode="practice";load()};
+$("giveUp").onclick=()=>{if(done)return;done=true;won=false;finish();save();render();showModal()};
+
+load();
+</script>
+<div class="modal" id="modal"></div>
+</body>
+</html>
